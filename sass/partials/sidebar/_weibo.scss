@@ -12,6 +12,7 @@
   p {
     position: relative;
     padding-right: 1em;
+    font-size: 95%;
   }
   a[href*=weibo]:first-child {
     color: $twitter-status-link;
@@ -26,9 +27,5 @@
       color: $sidebar-link-color-subdued-hover;
       text-decoration: none;
     }
-  }
-  a[href*='twitter.com/search']{
-    @extend .aside-alt-link;
-    @include hover-link;
   }
 }

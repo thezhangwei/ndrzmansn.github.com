@@ -63,6 +63,11 @@ github_repo_count: 0
 github_show_profile_link: true
 github_skip_forks: true
 
+# Weibo
+weibo_user: 傻革小张
+weibo_status_count: 4
+weibo_follow_button: true
+
 # Twitter
 twitter_user: ndrzmansn
 twitter_tweet_count: 4
