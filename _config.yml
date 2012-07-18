@@ -67,6 +67,7 @@ github_skip_forks: true
 weibo_user: 傻革小张
 weibo_status_count: 4
 weibo_follow_button: true
+weibo_share_button: true
 
 # Twitter
 twitter_user: ndrzmansn
