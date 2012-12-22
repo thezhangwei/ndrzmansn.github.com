@@ -176,7 +176,54 @@ Octopress 的 twitter plugin 就很简洁，和整体的 stylesheet 结合的很
 
 <p>添加 <code>{octopress_site}/source/_includes/asides/weibo.html</code>。</p>
 
-<p>{% gist 3058521 %}</p>
+<div><script src='https://gist.github.com/3058521.js?file='></script>
+<noscript><pre><code>{% if site.weibo_user %}
+&lt;section&gt;
+  &lt;h1&gt;Latest Weibos&lt;/h1&gt;
+  &lt;ul id=&quot;weibos&quot;&gt;
+    &lt;li class=&quot;loading&quot;&gt;Status updating...&lt;/li&gt;
+  &lt;/ul&gt;
+
+  &lt;script src=&quot; http://tjs.sjs.sinajs.cn/open/api/js/wb.js?appkey=XXXXXX&quot;
+        type=&quot;text/javascript&quot; charset=&quot;utf-8&quot;&gt;&lt;/script&gt;
+
+  &lt;script src=&quot;{{ root_url }}/javascripts/libs/weiboutil.js&quot; type=&quot;text/javascript&quot;&gt; &lt;/script&gt;
+  &lt;script src=&quot;{{ root_url }}/javascripts/weibo.js&quot; type=&quot;text/javascript&quot;&gt; &lt;/script&gt;
+  
+  &lt;script type=&quot;text/javascript&quot;&gt;
+    WB2.anyWhere(function(W){
+        // get latest weibos
+        W.parseCMD(
+            &quot;/statuses/user_timeline.json&quot;,
+            function(sResult, bStatus){
+                if(bStatus == true) {
+                    showWeibos(sResult['statuses'], {{site.weibo_status_count}});
+                }
+            },
+            {screen_name : '{{site.weibo_user}}'},
+            {method: 'get'}
+        );
+    });
+  &lt;/script&gt;
+
+  {% if site.weibo_follow_button %}
+  &lt;div id='wb_follow_btn'&gt;@{{ site.weibo_user}}&lt;/div&gt;
+
+  &lt;script type=&quot;text/javascript&quot;&gt;
+    WB2.anyWhere(function(W){
+        W.widget.followButton({
+            'nick_name': '{{ site.weibo_user}}',
+            'id': &quot;wb_follow_btn&quot;
+        });
+    });
+  &lt;/script&gt;
+  {% else %}
+  &lt;p&gt;关注 &lt;a href=&quot;http://s.weibo.com/weibo/{{ site.weibo_user }}&quot;&gt;@{{ site.weibo_user }}&lt;/a&gt;&lt;/p&gt;
+  {% endif %}
+&lt;/section&gt;
+{% endif %}
+</code></pre></noscript></div>
+
 
 <p><strong>Line 8</strong>:
 Load 微博 JS SDK。
@@ -211,73 +258,115 @@ Callback 里调用 <code>weibo.js</code> 里的 <code>showWeibos()</code> （见
 
 <p>添加 <code>{octopress_site}/source/javascripts/weibo.js</code>。</p>
 
-<p>{% codeblock weibo.js %}
-function showWeibos(statuses, count) {</p>
+<figure class='code'><figcaption><span>weibo.js </span></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">showWeibos</span><span class="p">(</span><span class="nx">statuses</span><span class="p">,</span> <span class="nx">count</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">count</span> <span class="o">=</span> <span class="nb">parseInt</span><span class="p">(</span><span class="nx">count</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">weibos</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;weibos&#39;</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">content</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">statuses</span> <span class="o">=</span> <span class="nx">statuses</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">count</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">userid</span> <span class="o">=</span> <span class="nx">statuses</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">user</span><span class="p">.</span><span class="nx">idstr</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="k">in</span> <span class="nx">statuses</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">content</span> <span class="o">+=</span> <span class="s1">&#39;&lt;li&gt;&#39;</span> <span class="o">+</span> <span class="s1">&#39;&lt;p&gt;&#39;</span><span class="p">;</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">status</span> <span class="o">=</span> <span class="nx">statuses</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'>        <span class="nx">text</span> <span class="o">+=</span> <span class="nx">getDateAndURL</span><span class="p">(</span><span class="nx">status</span><span class="p">,</span> <span class="nx">userid</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">text</span> <span class="o">+=</span> <span class="nx">linkifyStatus</span><span class="p">(</span><span class="nx">status</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">status</span><span class="p">[</span><span class="s1">&#39;retweeted_status&#39;</span><span class="p">])</span> <span class="p">{</span>
+</span><span class='line'>            <span class="nx">status</span> <span class="o">=</span> <span class="nx">status</span><span class="p">[</span><span class="s1">&#39;retweeted_status&#39;</span><span class="p">];</span>
+</span><span class='line'>            <span class="nx">text</span> <span class="o">+=</span> <span class="s1">&#39;//&#39;</span> <span class="o">+</span> <span class="nx">linkifyUser</span><span class="p">(</span><span class="nx">status</span><span class="p">[</span><span class="s1">&#39;user&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">text</span> <span class="o">+=</span> <span class="nx">linkifyStatus</span><span class="p">(</span><span class="nx">status</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]);</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="nx">content</span> <span class="o">+=</span> <span class="nx">text</span><span class="p">;</span>
+</span><span class='line'>        <span class="nx">content</span> <span class="o">+=</span> <span class="s1">&#39;&lt;/p&gt;&#39;</span> <span class="o">+</span> <span class="s1">&#39;&lt;/li&gt;&#39;</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nx">weibos</span><span class="p">.</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">content</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">function</span> <span class="nx">getDateAndURL</span><span class="p">(</span><span class="nx">status</span><span class="p">,</span> <span class="nx">userid</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="s1">&#39;&lt;a href=&quot;http://weibo.com/&#39;</span> <span class="o">+</span> <span class="nx">userid</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="nx">WeiboUtil</span><span class="p">.</span><span class="nx">mid2url</span><span class="p">(</span><span class="nx">status</span><span class="p">[</span><span class="s1">&#39;mid&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;&quot;&gt;&#39;</span>
+</span><span class='line'>             <span class="o">+</span> <span class="nx">prettyDate</span><span class="p">(</span><span class="nx">status</span><span class="p">.</span><span class="nx">created_at</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&lt;/a&gt;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// pretty much copied from twitter.js</span>
+</span><span class='line'><span class="kd">function</span> <span class="nx">linkifyStatus</span><span class="p">(</span><span class="nx">text</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="c1">// Chomp http:// off the text of the link</span>
+</span><span class='line'>    <span class="nx">text</span> <span class="o">=</span> <span class="nx">text</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/(https?:\/\/)([\w\-:;?&amp;=+.%#\/]+)/gi</span><span class="p">,</span> <span class="s1">&#39;&lt;a href=&quot;$1$2&quot;&gt;$2&lt;/a&gt;&#39;</span><span class="p">);</span>
+</span><span class='line'>    <span class="c1">// cannot get user url using screen name, need userid. so redirect to search the screen name</span>
+</span><span class='line'>    <span class="nx">text</span> <span class="o">=</span> <span class="nx">text</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/(^|\W)@(\S+)\:/g</span><span class="p">,</span> <span class="s1">&#39;$1&lt;a href=&quot;http://s.weibo.com/weibo/$2&quot;&gt;@$2&lt;/a&gt;:&#39;</span><span class="p">);</span>
+</span><span class='line'>    <span class="c1">// linkify topic, not tested yet</span>
+</span><span class='line'>    <span class="nx">text</span> <span class="o">=</span> <span class="nx">text</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/(^|\W)#(\S+)/g</span><span class="p">,</span> <span class="s1">&#39;$1&lt;a href=&quot;http://s.weibo.com/weibo/$2&quot;&gt;#$2&lt;/a&gt;&#39;</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">text</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">function</span> <span class="nx">linkifyUser</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">user</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">profile_url</span> <span class="o">=</span> <span class="nx">user</span><span class="p">.</span><span class="nx">profile_url</span><span class="p">;</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">name</span> <span class="o">=</span> <span class="nx">user</span><span class="p">.</span><span class="nx">name</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">return</span> <span class="s1">&#39;&lt;a href=&quot;http://weibo.com/&#39;</span> <span class="o">+</span> <span class="nx">profile_url</span> <span class="o">+</span> <span class="s1">&#39;&quot;&gt;@&#39;</span> <span class="o">+</span> <span class="nx">name</span> <span class="o">+</span> <span class="s1">&#39;&lt;/a&gt;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-<pre><code>count = parseInt(count, 10);
-var weibos = document.getElementById('weibos');
-var content = '';
-statuses = statuses.slice(0, count);
-var userid = statuses[0].user.idstr;
-
-for (var i in statuses) {
-    content += '&lt;li&gt;' + '&lt;p&gt;';
-    var status = statuses[i];
-    var text = '';
-    text += getDateAndURL(status, userid);
-    text += linkifyStatus(status['text']);
-
-    if (status['retweeted_status']) {
-        status = status['retweeted_status'];
-        text += '//' + linkifyUser(status['user']) + ':';
-        text += linkifyStatus(status['text']);
-    }
-
-    content += text;
-    content += '&lt;/p&gt;' + '&lt;/li&gt;';
-}
-
-weibos.innerHTML = content;
-</code></pre>
-
-<p>}</p>
-
-<p>function getDateAndURL(status, userid) {</p>
-
-<pre><code>return '&lt;a href="http://weibo.com/' + userid + '/' + WeiboUtil.mid2url(status['mid']) + '"&gt;'
-         + prettyDate(status.created_at) + '&lt;/a&gt;';
-</code></pre>
-
-<p>}</p>
-
-<p>// pretty much copied from twitter.js
-function linkifyStatus(text) {</p>
-
-<pre><code>// Chomp http:// off the text of the link
-text = text.replace(/(https?:\/\/)([\w\-:;?&amp;=+.%#\/]+)/gi, '&lt;a href="$1$2"&gt;$2&lt;/a&gt;');
-// cannot get user url using screen name, need userid. so redirect to search the screen name
-text = text.replace(/(^|\W)@(\S+)\:/g, '$1&lt;a href="http://s.weibo.com/weibo/$2"&gt;@$2&lt;/a&gt;:');
-// linkify topic, not tested yet
-text = text.replace(/(^|\W)#(\S+)/g, '$1&lt;a href="http://s.weibo.com/weibo/$2"&gt;#$2&lt;/a&gt;');
-
-return text
-</code></pre>
-
-<p>}</p>
-
-<p>function linkifyUser(user) {</p>
-
-<pre><code>if (!user) {
-    return '';
-}
-
-var profile_url = user.profile_url;
-var name = user.name;
-return '&lt;a href="http://weibo.com/' + profile_url + '"&gt;@' + name + '&lt;/a&gt;';
-</code></pre>
-
-<p>}
-{% endcodeblock %}</p>
 
 <p><strong>Line 1</strong>:
 <code>showWeibos()</code> 把传入的 <code>user_timeline.json</code> slice 成指定的长度，然后
@@ -301,71 +390,98 @@ parse 成一系列的 <code>&lt;li&gt;</code>。
 
 <p>添加 <code>{octopress_site}/sass/partials/sidebar/_weibo.scss</code>。</p>
 
-<p>{% codeblock _weibo.scss %}</p>
+<figure class='code'><figcaption><span>_weibo.scss </span></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+</pre></td><td class='code'><pre><code class='scss'><span class='line'><span class="nn">#weibos</span> <span class="p">{</span>
+</span><span class='line'>  <span class="nc">.loading</span> <span class="p">{</span>
+</span><span class='line'>    <span class="na">background</span><span class="o">:</span> <span class="nf">inline-image</span><span class="p">(</span><span class="s1">&#39;</span><span class="s2">bird_32_gray.png&#39;</span><span class="p">)</span> <span class="no">no-repeat</span> <span class="no">center</span> <span class="mf">.5</span><span class="kt">em</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">color</span><span class="o">:</span> <span class="nf">darken</span><span class="p">(</span><span class="nv">$sidebar-bg</span><span class="o">,</span> <span class="mi">18</span><span class="p">);</span>
+</span><span class='line'>    <span class="na">text-shadow</span><span class="o">:</span> <span class="nv">$main-bg</span> <span class="mi">0</span> <span class="mi">1</span><span class="kt">px</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">text-align</span><span class="o">:</span> <span class="no">center</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">padding</span><span class="o">:</span> <span class="mi">2</span><span class="mf">.5</span><span class="kt">em</span> <span class="mi">0</span> <span class="mf">.5</span><span class="kt">em</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">&amp;</span><span class="nc">.error</span> <span class="p">{</span>
+</span><span class='line'>      <span class="na">background</span><span class="o">:</span> <span class="nf">inline-image</span><span class="p">(</span><span class="s1">&#39;</span><span class="s2">bird_32_gray_fail.png&#39;</span><span class="p">)</span> <span class="no">no-repeat</span> <span class="no">center</span> <span class="mf">.5</span><span class="kt">em</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>  <span class="nt">p</span> <span class="p">{</span>
+</span><span class='line'>    <span class="na">position</span><span class="o">:</span> <span class="no">relative</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">padding-right</span><span class="o">:</span> <span class="mi">1</span><span class="kt">em</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">font-size</span><span class="o">:</span> <span class="mi">95</span><span class="kt">%</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>  <span class="nt">a</span><span class="o">[</span><span class="nt">href</span><span class="o">*=</span><span class="nt">weibo</span><span class="o">]</span><span class="nd">:first-child</span> <span class="p">{</span>
+</span><span class='line'>    <span class="na">color</span><span class="o">:</span> <span class="nv">$twitter-status-link</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">float</span><span class="o">:</span> <span class="no">right</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">padding</span><span class="o">:</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mf">.1</span><span class="kt">em</span> <span class="mi">1</span><span class="kt">em</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">position</span><span class="o">:</span> <span class="no">relative</span><span class="p">;</span> <span class="na">right</span><span class="o">:</span> <span class="mi">-1</span><span class="mf">.3</span><span class="kt">em</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">text-shadow</span><span class="o">:</span> <span class="mh">#fff</span> <span class="mi">0</span> <span class="mi">1</span><span class="kt">px</span><span class="p">;</span>
+</span><span class='line'>    <span class="na">font-size</span><span class="o">:</span> <span class="mf">.7</span><span class="kt">em</span><span class="p">;</span>
+</span><span class='line'>    <span class="nt">span</span> <span class="p">{</span> <span class="na">font-size</span><span class="o">:</span> <span class="mi">1</span><span class="mf">.5</span><span class="kt">em</span><span class="p">;</span> <span class="p">}</span>
+</span><span class='line'>    <span class="na">text-decoration</span><span class="o">:</span> <span class="no">none</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">&amp;</span><span class="nd">:hover</span> <span class="p">{</span>
+</span><span class='line'>      <span class="na">color</span><span class="o">:</span> <span class="nv">$sidebar-link-color-subdued-hover</span><span class="p">;</span>
+</span><span class='line'>      <span class="na">text-decoration</span><span class="o">:</span> <span class="no">none</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-<h1>weibos {</h1>
-
-<p>  .loading {</p>
-
-<pre><code>background: inline-image('bird_32_gray.png') no-repeat center .5em;
-color: darken($sidebar-bg, 18);
-text-shadow: $main-bg 0 1px;
-text-align: center;
-padding: 2.5em 0 .5em;
-&amp;.error {
-  background: inline-image('bird_32_gray_fail.png') no-repeat center .5em;
-}
-</code></pre>
-
-<p>  }
-  p {</p>
-
-<pre><code>position: relative;
-padding-right: 1em;
-font-size: 95%;
-</code></pre>
-
-<p>  }
-  a[href*=weibo]:first-child {</p>
-
-<pre><code>color: $twitter-status-link;
-float: right;
-padding: 0 0 .1em 1em;
-position: relative; right: -1.3em;
-text-shadow: #fff 0 1px;
-font-size: .7em;
-span { font-size: 1.5em; }
-text-decoration: none;
-&amp;:hover {
-  color: $sidebar-link-color-subdued-hover;
-  text-decoration: none;
-}
-</code></pre>
-
-<p>  }
-}
-{% endcodeblock %}</p>
 
 <p>基本沿用 <code>_twitter.scss</code>。
 我只是把字体调小了一点。</p>
 
 <p>为了正常加载，在 <code>{octopress_site}/sass/partials/_sidebar.scss</code>
-里添加 import。
-{% codeblock lang:sass %}
-@import &#8220;sidebar/weibo&#8221;;
-{% endcodeblock %}</p>
+里添加 import。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sass'><span class='line'><span class="k">@import</span> <span class="s">&quot;sidebar/weibo&quot;;</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <h3>4. Config</h3>
 
-<p>在 <code>{octopress_site}/_config.yml</code> 里添加相应的选项。
-{% codeblock _config.yml %}</p>
+<p>在 <code>{octopress_site}/_config.yml</code> 里添加相应的选项。</p>
 
-<h1>Weibo</h1>
+<figure class='code'><figcaption><span>_config.yml </span></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="c1"># Weibo</span>
+</span><span class='line'><span class="l-Scalar-Plain">weibo_user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">你大爷</span>
+</span><span class='line'><span class="l-Scalar-Plain">weibo_status_count</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">4</span>
+</span><span class='line'><span class="l-Scalar-Plain">weibo_follow_button</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
+</span></code></pre></td></tr></table></div></figure>
 
-<p>weibo_user: 你大爷
-weibo_status_count: 4
-weibo_follow_button: true
-{% endcodeblock %}</p>
 
 <p>That&#8217;s it ladies!</p>
 
@@ -471,9 +587,9 @@ Anyway 这种东西对整个平台的正常运行不会有什么影响。
 <aside class="sidebar">
   
     <section>
-<iframe width="250" height="450" class="share_self"  
+<iframe width="250" height="550" class="share_self"  
   frameborder="0" scrolling="no" 
-  src="http://widget.weibo.com/weiboshow/index.php?language=&width=250&height=450&
+  src="http://widget.weibo.com/weiboshow/index.php?language=&width=250&height=550&
   fansRow=2&ptype=1&speed=0&skin=1&isTitle=0&noborder=0&isWeibo=1&isFans=0&uid=2116636225&verifier=7b807bb3&dpc=1">
 </iframe>
 </section>
