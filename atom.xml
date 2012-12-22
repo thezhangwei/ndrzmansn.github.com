@@ -1,0 +1,950 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[傻革小张]]></title>
+  <link href="http://ndrzmansn.github.com/atom.xml" rel="self"/>
+  <link href="http://ndrzmansn.github.com/"/>
+  <updated>2012-12-22T01:35:08-08:00</updated>
+  <id>http://ndrzmansn.github.com/</id>
+  <author>
+    <name><![CDATA[小张]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[自定义 Octopress 新浪微博 sidebar]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2012/07/05/weibo-sidebar/"/>
+    <updated>2012-07-05T21:12:00-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2012/07/05/weibo-sidebar</id>
+    <content type="html"><![CDATA[<p>我花了点时间给Octopress加了一个新浪微博的sidebar。
+很简单，就是抓取特定用户（比如说我）最近的几条微博，然后显示在网页侧栏上。
+为了不影响整个网页样式的统一，我避免了使用官方提供的微博秀（很难看）。
+因为新浪所谓开放API的种种限制，我必须想办法绕开常规的开发授权流程，使脚本能在不同浏览器上正常工作。</p>
+
+<p>下面的内容会分成两部分。
+我先解释一下新浪微博开发授权大概是如何运作的，并且抱怨一下这东西有多不合理；然后简单描述一下我的解决方式。</p>
+
+<h2>这东西怎么能叫开放平台</h2>
+
+<p>提醒一下，这部分基本是 rant，受不了的请跳过。</p>
+
+<p>隔三差五会听到有人抱怨 <a href="http://techcrunch.com/2010/06/29/twitter-api-limit/">twitter API的频次限制</a>。
+尽管 twitter 的后端已经从最开始的 Rails 转移到 JVM + Scala，大量的 API 调用还是让他们难以负荷。
+即便是如此，相当数量的 API 还是可以匿名的方式读取。
+比如我在自己的网页上加一段 JavaScript 读取某个用户最近的 tweets 是完全开放的。
+不需要授权，客户端的浏览器也不需要处于 twitter 登陆的状态。
+What is publically available is publically available.</p>
+
+<!--more-->
+
+
+<p>新浪微博的 API 很大程度上受到了 twitter API 的影响。
+后端还是基于PHP，当然 Facebook 也是。
+微博<a href="http://open.weibo.com/">开发平台</a>的主页上写着“开放平台”，但是这个平台几乎没有开放 API。
+所有的请求都需要一个 Appkey。
+也就是说你必须注册成开发者，然后获得自己的 Appkey。
+但是事情没这么简单。
+作为‘合法’的开发者，我们必须在开发管理界面里提供自己要开发的应用或者要接入微博的网站的信息，然后提交审核。
+而提交审核的前提是提供开发者完整的个人信息，比如真实姓名和证件。
+提交审核的内容还需要附上一些记录在案所用的材料，比如所申请接入网站的证书。
+你说我一个 github page 哪来的证书？这等审核最终通过都何年何月了？</p>
+
+<p>注册并获得 Appkey 的开发者，在应用通过审核之前可以用测试账户部署自己的应用。
+但是测试账户受到很大的限制。
+只有当前浏览器以测试账户的身份处于微博登陆状态时，与其相关的 Appkey 才能成功的发出 API 请求。
+也就是说测试账户只能用于开发者在自己的浏览器上做测试，其他啥也干不了。</p>
+
+<p>即便给了身份证，提供了审核所需要的鬼材料，最终通过了审核。
+新浪老爷开放了API 访问权限。
+大部分的 API 请求还是需要用户处于登陆状态。
+比如我的侧栏抓取的是 <code>/statuses/user_timeline.json</code>。
+如果客户端的浏览器当前登陆了微博，OK，一切正常，侧栏可以正常显示我最近的微博。
+换到 iPad 上的浏览器就不灵了。谁在 iPad 上用 Safari 登陆微博？
+我只能指望别人在移动设备上用 native app 登陆。
+或者说我如何能指望每个浏览我网页的浏览器是处于微博登陆状态的？
+难不成我还整个登陆按钮，呼吁他先登陆微博，然后我倒霉的侧栏才能正常显示？
+有任何人会在手机浏览器上敲用户名密码登陆该死的微博么？
+这种限制就是给用户体验扇耳光。</p>
+
+<p>OK，话说回来。
+我本来的动机也不是要开发什么正经的应用，也不是要大规模地在网页上接入微博。
+我只是要简单的读取一些用户信息，然后转化成 html。
+新浪微博工具里的<a href="http://www.weibo.com/tool/weiboshow">微博秀</a>就可以实现这个功能。
+我之前的 blog 也是用它来着。
+但是我不想用你的 iframe，我想用自己的 stylesheet。
+Octopress 的 twitter plugin 就很简洁，和整体的 stylesheet 结合的很自然。
+我为什么非要很突兀地插一个第三方 styled 的 iframe？</p>
+
+<p>我觉得我的要求是合理的，所谓的‘开放平台’不够开放。</p>
+
+<h2>给 Octopress 添加自定义的新浪微博 sidebar</h2>
+
+<p>我基本上是参照了 octopress 的 twitter sidebar。</p>
+
+<h3>1. HTML</h3>
+
+<p>添加 <code>{octopress_site}/source/_includes/asides/weibo.html</code>。</p>
+
+<p>{% gist 3058521 %}</p>
+
+<p><strong>Line 8</strong>:
+Load 微博 JS SDK。
+这里有个 hack。把 <code>appkey</code> 改为 <em>3845272542</em>。
+这个 key 不是我的，是微博秀用的 Appkey。
+这个 key 没有浏览器登陆限制。
+也就是说，用它可以把一般接口开放化。
+我的猜想是所有的微博秀都会用这个 key，所以简单的使用不会给后台统计数据添加可察觉到的变化。
+总之，be aware and be responsible。</p>
+
+<p><strong>Line 11</strong>:
+我用了 <a href="http://weibo.com/xingrz">XiNGRZ</a> 写的一个 helper class。
+功能是把每条<em>微博/status</em> 的 <code>mid</code> 转化成 url string，从而得到每条微博的
+url。</p>
+
+<p><strong>Line 12</strong>:
+处理 <code>user_timeline.json</code> 的脚本。下面会具体解释。</p>
+
+<p><strong>Line 14-28</strong>:
+API 请求，获取 <code>user_timelne.json</code>。
+Callback 里调用 <code>weibo.js</code> 里的 <code>showWeibos()</code> （见下文）。</p>
+
+<p><strong>Line 30-42</strong>:
+一个关注按钮。
+我直接用了新浪的 JS widget。
+这个不是必须的。我可能之后会改。</p>
+
+<h3>2. JavaScript</h3>
+
+<p>下载这个 <a href="https://gist.github.com/1844413">gist</a>，另存为
+<code>{octopress_site}/source/javascripts/libs/weiboutil.js</code>。</p>
+
+<p>添加 <code>{octopress_site}/source/javascripts/weibo.js</code>。</p>
+
+<p>{% codeblock weibo.js %}
+function showWeibos(statuses, count) {</p>
+
+<pre><code>count = parseInt(count, 10);
+var weibos = document.getElementById('weibos');
+var content = '';
+statuses = statuses.slice(0, count);
+var userid = statuses[0].user.idstr;
+
+for (var i in statuses) {
+    content += '&lt;li&gt;' + '&lt;p&gt;';
+    var status = statuses[i];
+    var text = '';
+    text += getDateAndURL(status, userid);
+    text += linkifyStatus(status['text']);
+
+    if (status['retweeted_status']) {
+        status = status['retweeted_status'];
+        text += '//' + linkifyUser(status['user']) + ':';
+        text += linkifyStatus(status['text']);
+    }
+
+    content += text;
+    content += '&lt;/p&gt;' + '&lt;/li&gt;';
+}
+
+weibos.innerHTML = content;
+</code></pre>
+
+<p>}</p>
+
+<p>function getDateAndURL(status, userid) {</p>
+
+<pre><code>return '&lt;a href="http://weibo.com/' + userid + '/' + WeiboUtil.mid2url(status['mid']) + '"&gt;'
+         + prettyDate(status.created_at) + '&lt;/a&gt;';
+</code></pre>
+
+<p>}</p>
+
+<p>// pretty much copied from twitter.js
+function linkifyStatus(text) {</p>
+
+<pre><code>// Chomp http:// off the text of the link
+text = text.replace(/(https?:\/\/)([\w\-:;?&amp;=+.%#\/]+)/gi, '&lt;a href="$1$2"&gt;$2&lt;/a&gt;');
+// cannot get user url using screen name, need userid. so redirect to search the screen name
+text = text.replace(/(^|\W)@(\S+)\:/g, '$1&lt;a href="http://s.weibo.com/weibo/$2"&gt;@$2&lt;/a&gt;:');
+// linkify topic, not tested yet
+text = text.replace(/(^|\W)#(\S+)/g, '$1&lt;a href="http://s.weibo.com/weibo/$2"&gt;#$2&lt;/a&gt;');
+
+return text
+</code></pre>
+
+<p>}</p>
+
+<p>function linkifyUser(user) {</p>
+
+<pre><code>if (!user) {
+    return '';
+}
+
+var profile_url = user.profile_url;
+var name = user.name;
+return '&lt;a href="http://weibo.com/' + profile_url + '"&gt;@' + name + '&lt;/a&gt;';
+</code></pre>
+
+<p>}
+{% endcodeblock %}</p>
+
+<p><strong>Line 1</strong>:
+<code>showWeibos()</code> 把传入的 <code>user_timeline.json</code> slice 成指定的长度，然后
+parse 成一系列的 <code>&lt;li&gt;</code>。
+之后把这些 list items 插入 dom 的 <code>#weibos</code>。</p>
+
+<p><strong>Line 28</strong>:
+<code>getDateAndURL()</code> 返回一个链接。
+链接指向指定的微博的永久链接。
+显示的文字是微博创建的时间。
+这里调用了 <code>twitter.js</code> 的 <code>prettyDate()</code>。
+所以 <code>weibo.js</code> 依赖于 <code>twitter.js</code> 的正常加载。</p>
+
+<p><strong>Line 34</strong>:
+<code>linkifyStatus()</code> reformat <code>status.text</code>，添加相应的链接。</p>
+
+<p><strong>Line 45</strong>:
+<code>linkifyUser()</code> 返回被转发的微博的用户链接。</p>
+
+<h3>3. CSS</h3>
+
+<p>添加 <code>{octopress_site}/sass/partials/sidebar/_weibo.scss</code>。</p>
+
+<p>{% codeblock _weibo.scss %}</p>
+
+<h1>weibos {</h1>
+
+<p>  .loading {</p>
+
+<pre><code>background: inline-image('bird_32_gray.png') no-repeat center .5em;
+color: darken($sidebar-bg, 18);
+text-shadow: $main-bg 0 1px;
+text-align: center;
+padding: 2.5em 0 .5em;
+&amp;.error {
+  background: inline-image('bird_32_gray_fail.png') no-repeat center .5em;
+}
+</code></pre>
+
+<p>  }
+  p {</p>
+
+<pre><code>position: relative;
+padding-right: 1em;
+font-size: 95%;
+</code></pre>
+
+<p>  }
+  a[href*=weibo]:first-child {</p>
+
+<pre><code>color: $twitter-status-link;
+float: right;
+padding: 0 0 .1em 1em;
+position: relative; right: -1.3em;
+text-shadow: #fff 0 1px;
+font-size: .7em;
+span { font-size: 1.5em; }
+text-decoration: none;
+&amp;:hover {
+  color: $sidebar-link-color-subdued-hover;
+  text-decoration: none;
+}
+</code></pre>
+
+<p>  }
+}
+{% endcodeblock %}</p>
+
+<p>基本沿用 <code>_twitter.scss</code>。
+我只是把字体调小了一点。</p>
+
+<p>为了正常加载，在 <code>{octopress_site}/sass/partials/_sidebar.scss</code>
+里添加 import。
+{% codeblock lang:sass %}
+@import &#8220;sidebar/weibo&#8221;;
+{% endcodeblock %}</p>
+
+<h3>4. Config</h3>
+
+<p>在 <code>{octopress_site}/_config.yml</code> 里添加相应的选项。
+{% codeblock _config.yml %}</p>
+
+<h1>Weibo</h1>
+
+<p>weibo_user: 你大爷
+weibo_status_count: 4
+weibo_follow_button: true
+{% endcodeblock %}</p>
+
+<p>That&#8217;s it ladies!</p>
+
+<h2>最后几句话</h2>
+
+<p>新浪微博 API 的文档让人很费解。
+我花了一些时间才弄明白整个流程。
+开发者论坛里也有点混乱。
+新的 OAuth 2 的授权机制还是不错的。
+方便了基于新浪微博平台的应用开发。
+但是整个平台缺少不需要授权能匿名访问的接口。
+不必要的使简单的接入复杂化了。
+当然，新浪更在乎正经的应用。</p>
+
+<p>现有的一些小的工具或者 widget 很难看，又不能订制。
+所以我只能用个 dirty hack。
+Anyway 这种东西对整个平台的正常运行不会有什么影响。
+最好的解决方式是新浪能开放部分 API，能够以匿名的方式访问。
+或者提供更方便的 mash up scripts。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[我们刚搬来]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2012/06/29/wo-men-gang-ban-lai/"/>
+    <updated>2012-06-29T23:34:00-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2012/06/29/wo-men-gang-ban-lai</id>
+    <content type="html"><![CDATA[<p>我们刚从 <a href="http://www.wzhang.org">www.wzhang.org</a> 搬家过来。</p>
+
+<p>傻子也革命的三个人又变成傻革小张一人了。
+我尽量把老东西port过来了，当然不可能尽善尽美。
+几年前的东西虽然算不上什么博文，也一气保留了下来。</p>
+
+<p>大部分时候会用微博。长的东西有时间会放到这里。
+细节还在继续完善。</p>
+
+<p>有人能帮我一块修改默认的theme吗，不慎感激！</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[6月5号KAMA音乐节]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2011/06/26/6e69c885e58fb7kamae99fb3e4b990e88a82/"/>
+    <updated>2011-06-26T00:26:26-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2011/06/26/6e69c885e58fb7kamae99fb3e4b990e88a82</id>
+    <content type="html"><![CDATA[<a href="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG0038.jpg"></a><a href="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG00671.jpg"><img class="alignleft size-medium wp-image-1277" title="IMAG0067" src="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG00671-300x225.jpg" alt="" width="300" height="225" /></a>
+
+<p>me too!</p>
+
+<a href="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG0063.jpg"><img class="alignleft size-medium wp-image-1279" title="IMAG0063" src="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG0063-300x179.jpg" alt="" width="300" height="179" /></a>
+
+<p>Eels 玩起了大胡子，像ZZ TOP伐？</p>
+
+<a href="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG0042.jpg"><img class="alignleft size-medium wp-image-1280" title="IMAG0042" src="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG0042-300x179.jpg" alt="" width="300" height="179" /></a>
+
+<p>丽莎姨。</p>
+
+<a href="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG0034.jpg"><img class="alignleft size-medium wp-image-1282" title="IMAG0034" src="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG0034-300x179.jpg" alt="" width="300" height="179" /></a>
+
+<p>看来不太带劲。</p>
+
+<a href="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG0037.jpg"><img class="alignleft size-medium wp-image-1284" title="IMAG0037" src="http://wzhang.org.s3.amazonaws.com/images/2011/06/IMAG0037-300x179.jpg" alt="" width="300" height="179" /></a>
+
+<p>KAMA音乐节很不错。交通便利，乐队大牌，而且黄牛票能打3折哟，。</p>
+
+<p>（现在博客也玩出微博的味道了，哇哈哈哈哈。。。）</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Bill Wells & Aiden Moffat - Everything’s Getting Older]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2011/06/06/bill-wells-aiden-moffat-everythinge28099s-getting-older/"/>
+    <updated>2011-06-06T04:16:59-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2011/06/06/bill-wells-aiden-moffat-everythinge28099s-getting-older</id>
+    <content type="html"><![CDATA[<img class="alignnone" title="billaidan" src="http://www.aidanmoffat.co.uk/images/uploads/CHEM150CD_SITE.jpg" alt="" width="510" height="264" />
+
+<p>我尽量避免在中文中过分的混入英文.</p>
+
+<p>Bill Wells 是苏格兰的实验爵士乐手, multi-instrumentalist. 前些年有跟女唱作者 Isobel Campbell (Belle & Sebastian前成员) 合作过专辑. 之后老姐投奔 Mark Lanegen (Streaming Tree 主音)了. Bill 应该是苏格兰的爵士老人.</p>
+
+<p>Aidan Moffat 是 Arab Strap 的主音. Arab Strap 解散后 Aidan 有出过个人专辑和一系列的 side projects. 怎么说呢, 有点苏格兰伤感诗人/唱作者.</p>
+
+<p>两人今年合作的这张专辑得到了颇多的好评. 上图是专辑封套, 正如专辑的 title 所说 &#8212;&#8212; 两个老头. 其实 Aidan 今年不过三十七岁. 封套上的单线素描刻意地苍老化了 Bill 和 Aidan, 同时也影射了专辑音乐里的叹息和忧伤. </p>
+
+<p>Bill 的器乐以钢琴为主线, 有时甚至替代了歇息的人声. 背景的敲击乐样式变化颇多, 几乎每一曲都不同. 但器乐整体简约而干净, 给 Aidan 的嗓音添加了一层较为稀薄的音色. Aidan 的歌词应该是亮点, 只可惜我没能找到专辑的歌词, 只能尝试片段试的理解. 应该是中年知识型哥们的文化试 rant, 有时甚至咽下贫瘠的旋律, 开始用苏格兰口音念歌词, 但不难听. </p>
+
+<p>哥们好像已经看到了自己的葬礼, 座在自己的棺材前开始念自己以前没事的时候写的诗, 念着念着就开始骂娘. 一会骂累了, 平静了下来开始叹气, 结果发现周围就他一个人. 好像很 deep, 又好像都是胡扯. 总之, 我挺喜欢.</p>
+
+<object height="81" width="100%"> <param name="movie" value="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F16346492&amp;show_comments=true&amp;auto_play=false&amp;color=ff7700"></param> <param name="allowscriptaccess" value="always"></param> <embed allowscriptaccess="always" height="81" src="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F16346492&amp;show_comments=true&amp;auto_play=false&amp;color=ff7700" type="application/x-shockwave-flash" width="100%"></embed> </object>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Seether - Here and Now]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2011/05/21/seether-here-and-now/"/>
+    <updated>2011-05-21T13:41:43-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2011/05/21/seether-here-and-now</id>
+    <content type="html"><![CDATA[<img class="alignnone" title="foxconn" src="http://nexgadget.com/images/explosion-at-foxconns-chengdu-plant-injures-several-could-affect-ipad-production-update-video_or-fu_0.jpg" alt="" width="480" height="320" />
+
+<p>Seether 的新专辑总算是出了. 制作人是Brendan O&#8217;Brien, 听说Incubus的新专辑也是他操刀. 前张专辑tour时加入乐队的第二吉他手在新专辑发行前离开了乐队.</p>
+
+<p>好听么? 一般&#8230;&#8230;不咋的&#8230;&#8230; 很多东西参差不齐. 亮点也有, 比如&#8221;Here and Now&#8221;. 90年代的东西还是留在90年代了. 尽管有Seether这样的revival, 他能再延续个十年, 也抗不到下个十年了. 其他的也说不出啥了. 照片是富士康成都工厂爆炸的新闻图片.</p>
+
+<p>小杨和小蔡呢? 都他妈地在忙着赚钱跟微薄. 李敖也在微博上&#8230;</p>
+
+<p>开始觉得这个博客只是个摆设, 三个人好像也很难维持. 尽管Wordpress有mobile app, 在手机上compose还是相对复杂. 大多数人还是倾向于微博的便捷.</p>
+
+<object height="81" width="100%"> <param name="movie" value="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F15653956&amp;show_comments=false&amp;auto_play=false&amp;color=ff7700"></param> <param name="allowscriptaccess" value="always"></param> <embed allowscriptaccess="always" height="81" src="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F15653956&amp;show_comments=false&amp;auto_play=false&amp;color=ff7700" type="application/x-shockwave-flash" width="100%"></embed> </object> ]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Foo Fighters - Wasting Light]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2011/04/28/foo-fighters-wasting-light/"/>
+    <updated>2011-04-28T13:27:37-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2011/04/28/foo-fighters-wasting-light</id>
+    <content type="html"><![CDATA[<img class="alignnone" title="ff" src="http://a1.sphotos.ak.fbcdn.net/hphotos-ak-snc6/228043_10150565984580545_25098475544_17996074_3040688_n.jpg" alt="" width="507" height="377" />
+
+<p>FF 整了个documentary &#8212; Back and Forth. 好像是在今年的SXSW上做的首映. 记录了Dave Grohl从Kurt Cobain死后, 拒绝了Tom Petty的鼓手位置, 然后几乎自己一个人录了FF的第一张专辑, 把FF一手拉扯到今天的过程中发生的那些事. </p>
+
+<p>Wasting List 是在Dave加州家的garage里, 完全用模拟设备录的. 制作人是当年 Nevermind 的制作人, Butch Vig. Nirvana的第四人, FF的旧部, Pat Smear在 Wasting Light 录制期间回归了乐队. Krist Novoselic也有参与录音. April 16, FF紧接着又出了一张cover album &#8212; Medium Rare.</p>
+
+<p>April 9, FF在Helen Mirren hosted的 Saturday Night Live 上perform了两周新专辑的歌: Rope 和 Walk. 我当时在电视前, 看完了FF唱这两首歌. 觉得&#8230;&#8230;很屌! 第一张专辑的活力又回来了! Dave四十了还能做到这样, 我们也不提啥更高的要求了. Wasting Light, 还是值得一听的. </p>
+
+<object height="81" width="100%"> <param name="movie" value="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F12900358&amp;show_comments=false&amp;auto_play=false&amp;color=ff7700"></param> <param name="allowscriptaccess" value="always"></param> <embed allowscriptaccess="always" height="81" src="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F12900358&amp;show_comments=false&amp;auto_play=false&amp;color=ff7700" type="application/x-shockwave-flash" width="100%"></embed> </object>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[迪伦演唱会观感]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2011/04/10/e8bfaae4bca6e6bc94e594b1e4bc9ae8a782e6849f/"/>
+    <updated>2011-04-10T21:39:18-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2011/04/10/e8bfaae4bca6e6bc94e594b1e4bc9ae8a782e6849f</id>
+    <content type="html"><![CDATA[<p>其实我不是太听Bob Dylan，</p>
+
+<p>其实主要是三联生活周刊上把老头说得很酷，</p>
+
+<p>这么酷岂不是买不到票了？</p>
+
+<p>擦，如今看演出的都是年轻人，有几个人真喜欢老头的啊，而且今天还是个星期三。</p>
+
+<p>结果像往常一样我来了工体门口蹲点，很多中外各界的乐迷都在跟黄牛斗智斗勇。（to小张同学：注: 比2005诺拉琼斯那次人少多了）</p>
+
+<p>开始的歌几乎没听过。配乐和旋律是够老，跟记录片里的一样。后面旋律越来越好，俨然名曲多了。forever young, like rolling stone。现场观众又是跳又是喊，台上还是比较淡定，冷酷的Bar band 作风,返场两次。期间只要口琴一响，现场就可用“high 爆”来形容。</p>
+
+<p>有酝酿的感情容易爆发，有前戏的encounter更精彩。这应该是全场火爆的原因之一吧。噢也~</p>
+
+<p>还有一些更深层次的原因。这次现场的都是维护治安的都是特勤，没看见几个警察，这是什么待遇？所以文化部门都知道是什么原因。</p>
+
+<p>据说Bob要求低票价，据说“things have changed”，“blowing in the wind”没批准唱，据说千多张票给了政府部门。</p>
+
+<p>我摘录几段625期三联生活周刊上摘录的他的言论如下：</p>
+
+<p>&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;-</p>
+
+<p>我能做的一切就是做我自己，你管我是谁。</p>
+
+<p>大学就像养老院，事实上，更多人死在了大学里。</p>
+
+<p>民主没有统治世界，你最好把它藏在脑袋里，这个世界被暴力主宰，你最好别多这个嘴。</p>
+
+<p>不管你多有钱，世上只有两种人：一种是还幸存的，一种是已迷失的。</p>
+
+<p>实际上，你要抑制自己的野心，这样你才能成为你应该成为的人。</p>
+
+<p>他不是忙着出生就是忙着去死。</p>
+
+<p>我觉得自己先是个诗人然后才是个音乐家。我活着像个诗人，死后也还是个诗人。</p>
+
+<p>我觉得诗人不会称自己为诗人的。</p>
+
+<p>人们从来不实践自己信仰的，只图方便快捷然后懊悔。</p>
+
+<p>没有什么比变化更稳定的东西了。</p>
+
+<p>无论谁生谁死，地球都照转。我的意思是说别看拿破仑那么嚣张，他死后我们任在生活。别看哈勃马克思那么风靡一时，他死后世界依然正常。生活不会为任何人停留一秒。这听起来令人难过，但却是真想，对吧？肯尼迪。</p>
+
+<p>我现在努力做的就是简练我的语言。没有哪一行文字把这你的手不放，没有哪一个小节会给你铺设陷阱，也没有什么填空式的文字堆砌，每一行都有货真价实的内容。</p>
+
+<p>我从来不考虑何时写作，我仅仅是灵光一闪然后把它记下来。我一向很认真对待自己写的东西。</p>
+
+<p>[gallery link=&#8221;file&#8221;]</p>
+
+<p>（左：来自<a href="http://www.wangxiaofeng.net/?p=7337">不许联想</a>，右：俺自己拍的）</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[冬日，黄昏--老兵不死，他们只是渐渐远行。]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2011/01/31/e586ace697a5efbc8ce9bb84e6988f-e88081e585b5e4b88de6adbbefbc8ce4bb96e4bbace58faae698afe6b890e6b890e8bf9ce8a18ce38082/"/>
+    <updated>2011-01-31T11:02:27-08:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2011/01/31/e586ace697a5efbc8ce9bb84e6988f-e88081e585b5e4b88de6adbbefbc8ce4bb96e4bbace58faae698afe6b890e6b890e8bf9ce8a18ce38082</id>
+    <content type="html"><![CDATA[<p>喜欢喝酒，但不会喝，喝了几杯脸就红了，但是酒是好玩意，整上两杯，让自己进入一种自我的境界。1949年的春天，那是一个神马春暖花开的季节~对于整个五零年代而言，Elvis Presley无疑是标志性的（虽然他的女儿最后嫁给了恋童癖者）。Rolf Wikström，他二大爷是谁，我真不知道，他喜欢啥颜色，是啥星座喜欢啥食物俺也不知道，</p>
+      
+<p>俺只是最近才翻到一张他的《blues》</p>
+<a href="http://wzhang.org.s3.amazonaws.com/images/2011/01/unnamed1.jpg"><img class="alignnone size-full wp-image-1203" title="unnamed" src="http://wzhang.org.s3.amazonaws.com/images/2011/01/unnamed1.jpg" alt="" width="120" height="120" /></a>
+
+<p>霎时间~我突然觉得，黑夜给了我黑色的眼睛，我却用它去寻找光明。</p>
+
+<p>没了。</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[新年，冒个泡泡。。]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2011/01/09/e696b0e5b9b4efbc8ce58692e4b8aae6b3a1e6b3a1e38082e38082/"/>
+    <updated>2011-01-09T22:27:12-08:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2011/01/09/e696b0e5b9b4efbc8ce58692e4b8aae6b3a1e6b3a1e38082e38082</id>
+    <content type="html"><![CDATA[<a href="http://wzhang.org.s3.amazonaws.com/images/2011/01/6628711bg922d9d2ef6da6901.jpg"><img class="alignnone size-medium wp-image-1190" title="麦海绵宝宝当劳" src="http://wzhang.org.s3.amazonaws.com/images/2011/01/6628711bg922d9d2ef6da6901-271x300.jpg" alt="" width="271" height="300" /></a>
+
+<p>新年新气象！～</p>
+
+<p>最近一直在听小张推荐的“我的精神良药”。里面60、70、80年代的流行音乐没现在形式上那么多花里胡哨的，但听完心里很舒服。原因没有想太多，可能是当时的人更直面内心，敢于抒发感受，更关注身边的现实。</p>
+
+<p>再早一些听hiphop，breakdance 很多。跟去Club较多有关，也和当时需要发泄和逃避现实有关。同时把自己的mp3中适合dance的做了评分和整理。</p>
+
+<p>去年年初听U2 的精选集很多，除了给力还是给力。当时还看了Bono的个人自述《Bono 谈Bono》。歌词的深邃与信仰宗教有关。</p>
+
+<p>陶喆和凤凰传奇组合也是去年经常听的。陶喆去年年末在北京没有办演唱会，但11月去了株洲。凤凰传奇10.1假期在北京展览馆连办两场，据说都是爆满。从CCTV-3的 回放看，现场确实耳目一新，都high翻了。</p>
+
+<p>去年情况大致如上。稍微花点时间静一下，都想起来了。。小张小杨，不错吧。。</p>
+
+<p>祝大家新年新气象，健康顺心。</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[小杨同学响应小张同学号召，为小菜同学做榜样开始冒泡]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/12/30/e5b08fe69da8e5908ce5ada6e5938de5ba94e5b08fe5bca0e5908ce5ada6e58fb7e58facefbc8ce4b8bae5b08fe88f9ce5908ce5ada6e5819ae6a69ce6a0b7e5bc80/"/>
+    <updated>2010-12-30T21:47:58-08:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/12/30/e5b08fe69da8e5908ce5ada6e5938de5ba94e5b08fe5bca0e5908ce5ada6e58fb7e58facefbc8ce4b8bae5b08fe88f9ce5908ce5ada6e5819ae6a69ce6a0b7e5bc80</id>
+    <content type="html"><![CDATA[<img class="alignnone" title="shenzhenyejing" src="http://lh4.ggpht.com/_BK8fOFMcQFE/RrXr26drChI/AAAAAAAAABc/1eARNgSvB0o/merge_image.jpg" alt="" width="520" />
+
+<p>现在是北京时间2010年12月30日星期四夜9点11分。</p>
+
+<p>喧嚣的已经渐渐安静，夜色笼罩着都市，窗外依旧车水马龙（这他妈不是扯淡嘛~）</p>
+
+<p>2010年还有一天零2小时四十七分就将过去（现在是九点十三了）。</p>
+
+<p>Xiaoyang已经顺利拿到了执业证</p>
+
+<p>首先，感谢党感谢祖国，让我顺利完成实习考核，没把我kacha掉就是对我最大的关心爱护</p>
+
+<p>其次，感谢父母，谢谢你们这么多年来对我的关心，一切妹陀都是纸老虎</p>
+
+<p>第三，感谢我的指导老师老吴，这么多年来，我始终觉得模仿你的签名实在是件挺难得事，尤其是我的考核鉴定。。。。但是，我没让您失望~我做到了~</p>
+
+<p>第四，感谢陈冠希、兽兽~~~你懂的~~</p>
+
+<p>最后，感谢所有的朋友们，谢谢你们对我的关心。</p>
+
+<p>谢谢大家！</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[The List of 2010 - Music]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/12/30/the-list-of-2010-music/"/>
+    <updated>2010-12-30T16:41:53-08:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/12/30/the-list-of-2010-music</id>
+    <content type="html"><![CDATA[<img class="alignnone" title="noen_indian" src="http://cdn.pitchfork.com/media/4667515236_0f606ff621_b.jpg" alt="" width="512" height="341" />
+<h3>Prelude</h3>
+<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" width="100%" height="81" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0"><param name="allowscriptaccess" value="always" /><param name="src" value="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1933495&amp;show_comments=false&amp;auto_play=false&amp;color=ff7700" /><embed type="application/x-shockwave-flash" width="100%" height="81" src="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1933495&amp;show_comments=false&amp;auto_play=false&amp;color=ff7700" allowscriptaccess="always"></embed></object>
+<strong>Four Tet - This Unfolds</strong><br>
+
+<p>又一年。从瑞典西海岸搬到了美国西海岸，从和谐的社会主义回到了人类社会的主流——资本主义。感觉这里除了多样的种族成分和“民主”的政治体制，和国内没有太多不一样。或者是自己还没适应过来。和之前在瑞典的朋友聊到这里的时候，忽然想到Lost里的情节。空难的幸存者习惯了荒岛上的生活，已经不适应他们之前现实社会中的角色，所以在历经磨难最后成功离开那个与世隔绝的荒岛后又陆续回到了岛上。Anyway，我们应该不会再回到岛上了，因为那不是现实生活。我们的绝大多数还是会回到所谓的“现实生活”中继续struggle to survive。有些人还是留下了，或许只是暂时的，原因可能也是出于现实生活。当然，有些人也许还会回到岛上，也许只是回去看看。</p>
+
+<p>扯到社会形态。我们80年代出生的这波人应该还记得，小时候的国内还是一个相对平均的，相对社会主义的和谐社会。走到现在，已经明显变成一个人分九等，贫富差距大的资本主义社会。主流价值观已经很不一样了。Censorship和政治体制倒是没怎么变。管它的，还是扯扯今年听了哪些歌。</p>
+
+<p>很抱歉，今年没有0Day MP3下载。当然，朋友们可以发邮件给我，我会回复链接。-_-!</p>
+<h3>My List</h3>
+<p>排名不分先后。</p>
+<h4>The XX - XX</h4>
+<img class="alignnone" title="xx" src="http://upload.wikimedia.org/wikipedia/commons/a/ae/Xx_album_cover.svg" alt="" width="200" height="200" />
+<p>09年年中的release，今年的水晶奖得主。英伦的三人Indie Group。极为简练的器乐配置，单弦的吉他弹奏加鼓机。Romy和Oliver交替呼应的阴郁嗓音里散发着强烈的The Cure的气息。一片遮眼的黑幕上，悲伤一滴一滴地滑落下来。很清楚的记得，歌德堡冬天的深夜，我从Chalmers E-Building的实验室走出来，在回Olof的路上，“XX”里的声音就是我当时看到的一切。</p>
+<h4>Baroness - Blue Record</h4>
+<img class="alignnone" title="xx" src="http://upload.wikimedia.org/wikipedia/en/0/0e/Baroness_-_Blue_Record.jpg" alt="" width="200" height="200" />
+<p>同上，也是09年下半年的作品。Georgia Metal班霸的第二张录音室专辑。浓重而猛烈的Sludge Metal。和唱片封套相互应，整张唱片听起来有点巴洛克风。迅猛中不乏丰富和华丽的色彩。又一张精心构思并极具可听性的Metal record，无疑使Baroness成为南方金属一只重要的力量。</p>
+<h4>Fang Islands - Fang Islands</h4>
+<img class="alignnone" title="xx" src="http://upload.wikimedia.org/wikipedia/en/2/22/Fang_Island.jpg" alt="" width="200" height="200" />
+<p>Mind-blowing的一张，太他妈有想像力了！在这个Indie充斥的时代，真正能给你一巴掌的东西。好像用Indie/Math-Rock的砖瓦砌成了一幢Post-Rock的建筑，Cute但具杀伤力。我刚听几耳朵就确定能进自己今年的十大。现在迫切需要更多的这样兼具创造力和激情的乐队出现，别他妈再来个哼小调Indie Band了。如果你还没听过Fang Island，go to Youtube and check them out，爽死你！</p>
+<h4>CEO - White Magic</h4>
+<img class="alignnone" title="xx" src="http://cdn.pitchfork.com/media/2882148.jpg" alt="" width="200" height="200" />
+<p>仅此向歌德堡致敬。Eric Berglund, aka CEO, 前The Tough Alliance成员，歌德堡人。“White Magic”是Eric的第一张个人专辑，在歌德堡本地的厂牌Sincerely Yours旗下发行。Sincerely Yours的地址在：fjällgatan 3 b 413 17 göteborg ^_^。算流行电子吧，旋律朗朗上口，但明显不是我的偏好。出于对瑞典的怀念，我选了SY今年我认为最好的一张。</p>
+<h4>Band of Horses - Infinite Arms</h4>
+<img class="alignnone" title="xx" src="http://upload.wikimedia.org/wikipedia/en/4/4d/Infinitearms.jpg" alt="" width="200" height="200" />
+<p>新的line-up，第三张录音室专辑，离开Sub-Pop后的第一张。中速的民谣摇滚或者流行，恬静而和谐。在我看来比前作更成熟更好听，虽然可能不太合Pitchfork的口味。</p>
+<h4>Black Mountain - Wilderness Heart</h4>
+<img class="alignnone" title="xx" src="http://cdn.pitchfork.com/media/wildernessheart200.jpg" alt="" width="200" height="200" />
+<p>Vancouver, Canada的five-piece。浓重，老气和失真的民谣重布鲁斯杂揉了点迷幻摇滚的元素。厚重的Blues riff有条不紊的向前推进，双主音漫不尽心的拉开嗓门，渐渐拉长到近乎斯吼。声音落下那一刻，让人感到一阵毛骨悚然的沧桑感。可能没多少新东西，但味道特别醇厚，能让听者回味很久。</p>
+<h4>Four Tet - There is Love in You</h4>
+<img class="alignnone" title="xx" src="http://upload.wikimedia.org/wikipedia/en/3/3d/Four_Tet_-_There_Is_Love_in_You_(CD).jpg" alt="" width="200" height="200" />
+<p>Four Tet的新专辑，距离上一张Full-length album已经有五年了。怎么说呢，已经没有那么Glitchy了。听起来更加暖化，温和，少了些扎人的亮点，多了点舞曲节拍。但还是不乏像“This Unfolds”这样让人有点灵魂出鞘的曲子。不能说有多失望吧，只能说自己还在适应实验电子的变化。</p>
+<h4>Superchunk - Majesty Shredding</h4>
+<img class="alignnone" title="xx" src="http://upload.wikimedia.org/wikipedia/en/e/ee/Majesty_Shredding_cover.jpg" alt="" width="200" height="200" />
+<p>Superchunk，来自North Carolina的老牌Indie-Rock劲旅，老树开新花。早在九十年代初Superchunk就活跃在Chapel Hill的Music Scene，并贯穿整个九十年代。乐队代表了所谓Indie-Rock最初的含义。2001年的“Here’s to Shutting Up”之后，乐队就正式解散了。“Majesty Shredding”是重组后的第一张录音室专辑。质朴的欢快，不减的活力。</p>
+<h4>Ben Frost - By The Throat</h4>
+<img class="alignnone" title="xx" src="http://upload.wikimedia.org/wikipedia/en/e/e7/BenFrostByTheThroat_300_300.jpg" alt="" width="200" height="200" />
+<p>我在这里挣扎了很久，因为今年着实涌现了大量不错的电子。Matthew Dear的&#8221;Black City&#8221;, Flying Lotus的&#8221;Cosmogramma&#8221;, Pantha Du Prince的”Black Noise“和Bonobo的”Black Sands“都有被考虑过放到这里。但因为空间有限，我不想再多防一张电子，加上我对House/Trance节拍的厌恶，最后选择了Ben Frost的”By The Throat“。”By The Throat“更加概念化，更加cinematic。整张唱片有点像1080P的唱片封面的电影版。如果说这个封套是个poster，那图中的狼群就是主角，黑夜里的暴雪就是整片的场景。大概只有现在生活在冰岛的Ben Frost能构思出这样的刺骨的唱片。</p>
+<h4>Fink - Sort of Revolution</h4>
+<img class="alignnone" title="xx" src="http://ninjatune.net/files/images/fink/two/zen146.jpg" alt="" width="200" height="200" />
+<p>老男人的嗓音，我不确定是不是能迷住一帮小女生，对我是比较管用。Fink，aka Finian Greenhall，Ninja Tune旗下的Singer-Songwriter，有点意思吧？Fink早期的东西其实是Ninja Tune典型的实验器乐Hip-Hop/Acid-Jazz。之后的几张唱片中，Fink渐渐重新拾起吉他，转变为了一个以Acoustic Guitar为主的唱作者。Jazzy而有点无奈的嗓音和finger-picking的吉他弹奏构成了音乐的主体，minimalistic的Dubstep作为其点缀。</p>
+<h3>Honorable Mention</h3>
+<h4>Oval - O/Oh</h4>
+<img class="alignnone" title="xx" src="http://cdn.pitchfork.com/media/ovalo200.jpg" alt="" width="200" height="200" /><img class="alignnone" title="xx" src="http://www.thrilljockey.com/assets/covers/104798.jpg" alt="" width="200" height="200" />
+<p>2010年有不少老牌实验电子都出了新唱片，当然有些不是新东西。比如Pan Sonic的”Gravitoni“，Plastikman的”Kompilation“和”Arkives Mix“，Autechre的”Oversteps“，Dntel的”After Parties 1 And 2“。让人觉得时光飞逝。出于对老人的尊敬，我在这里特别列出Oval时隔将近十年后的两张新作：EP”Oh“和双CD专辑”O“。其他就不多说了。</p>
+<h3>Epilogue</h3>
+<p>The XX – XX</p>
+<p>Baroness – Blue Record</p>
+<p>Ben Frost - By The Throat</p>
+<p>Fink - Sort of Revolution</p>
+<p>以上是2009年的releases，其他均是2010年的releases。</p>
+
+<p>水平和时间有限，请见谅。</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[新域名：shaziyegeming.net]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/12/30/e696b0e59f9fe5908defbc9ashaziyegeming-net/"/>
+    <updated>2010-12-30T07:18:59-08:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/12/30/e696b0e59f9fe5908defbc9ashaziyegeming-net</id>
+    <content type="html"><![CDATA[<img class="alignnone" title="shaziyegeming.net" src="http://lh4.ggpht.com/_GzKqKwhvMLU/TRvACvd9p2I/AAAAAAAABD0/0HXv6Ib_9xw/s800/None.jpg" alt="" width="495" height="330" />
+<p>Just so that you know. 新域名：<strong>shaziyegeming.net</strong> 已经生效！</p>
+<p>旧域名：wzhang.org 仍然有效！</p>
+<p>Stay Tuned.</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[CR-48]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/12/17/cr-48/"/>
+    <updated>2010-12-17T14:54:39-08:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/12/17/cr-48</id>
+    <content type="html"><![CDATA[<img class="alignnone" title="CR-48" src="http://lh4.ggpht.com/_GzKqKwhvMLU/TQr6paW0MDI/AAAAAAAABCg/m8J_fGknM5o/s640/IMG_0157.JPG" alt="" width="512" height="382" />
+<p>运气还不错. 收到Google寄来的CR-48了!!!</p>
+<p>有Verizon的3G模块. 两年内免费的100 MB/Month的流量&#8230;呵呵.</p>
+
+<h3>整体感</h3>
+<p>大概摸了一下,现在的可用性并不是很好. 整个操作系统使用起来并没有跟其他OS上装个Chrome browser有什么不一样 (Engadget的review也有类似的话). 系统功能设置极为简单. 没有办法访问文件系统. 所以, 我也不大清楚在Chrome OS上下载有什么意义, 虽然你确实可以下载各种文件.</p>
+
+<h3>硬件</h3>
+<p>硬件就不多说了. 简单的讲就像个macbook但是感觉更cheap, 就是各个细节都显得更粗糙. 但是整体还算轻薄, 毕竟是个免费的试用品. 键盘很好用, 功能键的设置很符合以浏览器的操作习惯. 有相应的back, forward, refresh 和 全屏键. 不是镜面LCD, 这一点很不错. 有单独的SD card slot.</p>
+<img class="alignnone" title="CR-48" src="http://lh5.ggpht.com/_GzKqKwhvMLU/TQr8iBO-iEI/AAAAAAAABDA/9FcCCicdtgI/s640/IMG_0165.JPG" alt="" width="512" height="382" />
+<h3>应用程序</h3>
+<p>Chrome OS的应用程序完全来依赖于Chrome Web Store. Chrome Web Store目前的App, 并没有办法完全满足average user的一般应用. 或者相应的web app用户体验还不够好, 甚至很不好用. 比如音乐播放, 完全依赖于streaming. Pandora之类是OK. 但是很多streaming service不是基于web的, 比如spotify. </p>
+
+<h3>界面</h3>
+<p>用户界面也有些粗糙. 比如, LCD屏幕上的字体没有anti-aliasing. 中文字体更是没有什么美化, 看起来跟好几年前的linux distro差不多. TouchPad的驱动还有些问题, 用起来不大习惯. </p>
+
+<h3>速度</h3>
+<p>很遗憾, 速度比较糟糕. 用gmail都明显感到不是很responsive. Flash video基本可以让风扇转起来. 网页的scrolling都不是很顺畅, 至少没有在Macbook book上舒服. 这样的performance很难superior netbook上的user experience. </p>
+
+<h3>结论</h3>
+<p>很明显 Google 没办法按期 official roll out Chrome OS. Chrome OS还有很长的路要走. 照现在的用户体验, iPad毫无疑问是更好的选择. 就算到明年年中, 到底是Chrome OS能比基于Android的tablet有什么优势还很难说. </p>
+
+<p>Anyway, 感谢Google能给我这个免费的Prototype.</p>
+<p>希望Chrome Web Store东西能更丰富一些, Chrome OS能更完善.</p>
+
+<p>^_^</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[2010年度第一次会议胜利召开]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/12/12/2010e5b9b4e5baa6e7acace4b880e6aca1e4bc9ae8aeaee8839ce588a9e58face5bc80/"/>
+    <updated>2010-12-12T09:49:52-08:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/12/12/2010e5b9b4e5baa6e7acace4b880e6aca1e4bc9ae8aeaee8839ce588a9e58face5bc80</id>
+    <content type="html"><![CDATA[<img class="alignnone" title="gemin" src="http://blogcache.artron.net/201011/9/497726_1289314423IC04.jpg" alt="" width="504" height="370" />
+
+<p>2010年12月12日上午9：00时，傻子也革命第一次会议胜利召开。来自全球各条战线的3名代表出席了会议。社会各界杰出人事列席了会议。</p>
+
+<p>大会首先听取和审议了小张、小菜、小杨同学的报告。在随后的会议中小张、小菜、小杨同志以“责任、压力、动力、信心”为主题做了生动的演讲，决心在党的坚强领导下，在全球群众的大力支持下，努力把傻子也革命建设成为一个活力、生机、和谐、富裕的符合科学发展观的网页。</p>
+
+<p>最后，小张代表阿凡达星球的华人做了重要讲话。小菜希望各位代表们认真认真贯彻落实会议精神，今后的工作要在凝心聚力、增进共识中发挥宣传员作用，在服务经济中发挥生力军作用，在联系群众、构建和谐中发挥连心桥作用。以开拓进取的精神，实事求是的态度，求真务实的作风，强力推进各项工作。上午11：30分，大会完成了各项议程后，在雄壮的卡拉ok中胜利闭幕。</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[傻子还能否革命?]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/12/12/e582bbe5ad90e8bf98e883bde590a6e99da9e591bd/"/>
+    <updated>2010-12-12T07:58:39-08:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/12/12/e582bbe5ad90e8bf98e883bde590a6e99da9e591bd</id>
+    <content type="html"><![CDATA[<object height="41" width="80%"> <param name="movie" value="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1817601&amp;show_comments=false&amp;auto_play=false&amp;color=ff7700"></param> <param name="allowscriptaccess" value="always"></param> <embed allowscriptaccess="always" height="81" src="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1817601&amp;show_comments=false&amp;auto_play=false&amp;color=ff7700" type="application/x-shockwave-flash" width="100%"></embed> </object>   <span><a href="http://soundcloud.com/cuddlyduddly/the-toadies-be-my-angel">The Toadies - Possum Kingdom</a></span>
+
+<h3>咋回事?</h3>
+<p>夏天回了趟国. 呆了一段时间, 然后又出来了. 挪了个地方.</p>
+<p>之后忙于生计. 近日算告一段落, 稍微有点时间来整整这个网站.</p>
+
+<p>想法就是,觉得个人blog没什么意思了. 本来自己话就不多. 什么情感生活记录&#8212;&#8212;没劲,恶心.</p>
+
+<p>国内见了几个老朋友. 想想大家一起合作要省力一些, 而且能带来多样性. 说不定能激发点东西.</p>
+
+<h3>谁是傻子也革命?</h3>
+<strong>傻子也革命</strong> = <strong>小张</strong> + <strong>小蔡</strong> + <strong>小杨</strong><br>
+<p>(请看, About Us: Sidebar)</p>
+<p>三个湖南人. 高中时组的乐队叫&#8221;傻子也革命&#8221;. 小杨起的. 当然, 我一直宣称是我的主意.</p>
+
+<p>高中毕业有十年了, 现在大家都生活在不同的城市.</p>
+
+<h3>咋整?</h3>
+<p>虽然距离很远, 但因为共同的爱好, 一起维持一个blog还是可以的. 各自能贡献自己的一部分.</p>
+<p>Podcast也在计划当中. 但, 会用湖南话.</p>
+
+<p>我想尽量go anonymous. 避免一切跟real identity相关的东西. 和0Day MP3Z相关的东西会尽量避免. 我不想惹到RIAA.</p>
+
+<p>God Bless Us&#8230;</p>
+<p>/傻子们</p>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Band of Horses - Laredo]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/09/23/band-of-horses-laredo/"/>
+    <updated>2010-09-23T04:44:04-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/09/23/band-of-horses-laredo</id>
+    <content type="html"><![CDATA[<a href="http://wzhang.org.s3.amazonaws.com/images/2010/09/IMG_0136.jpg"><img class="alignnone size-medium wp-image-997" title="IMG_0136" src="http://wzhang.org.s3.amazonaws.com/images/2010/09/IMG_0136-300x225.jpg" alt="" width="225" height="169" /></a><a href="http://wzhang.org.s3.amazonaws.com/images/2010/09/IMG_0138.jpg"><img class="alignnone size-medium wp-image-998" title="IMG_0138" src="http://wzhang.org.s3.amazonaws.com/images/2010/09/IMG_0138-300x225.jpg" alt="" width="225" height="169" /></a>
+<iframe class="youtube-player" type="text/html" width="480" height="295" src="http://www.youtube.com/embed/YH8QICzCO8g" frameborder="0"></iframe>
+<object height="81" width="95%"> <param name="movie" value="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2804943&amp;show_comments=true&amp;auto_play=false&amp;color=ff7700"></param> <param name="allowscriptaccess" value="always"></param> <embed allowscriptaccess="always" height="81" src="http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2804943&amp;show_comments=true&amp;auto_play=false&amp;color=ff7700" type="application/x-shockwave-flash" width="95%"></embed> </object> 
+<p>In Irvine. I will find some time to keep the site more updated.</p>
+<strong>[Laredo - Lyric]</strong><br>
+<em>Gonna take a trip to Laredo<br>
+Gonna take a dip in the lake<br>
+Oh, I&#8217;m at a crossroads with myself<br>
+I don&#8217;t got no one else<br>
+<br>
+And possibilities at the door<br>
+I won&#8217;t be needing them anymore<br>
+Oh, is this the first time in your life?<br>
+It&#8217;s hard just to get by<br>
+<br>
+But oh, my love, don&#8217;t you even know?<br>
+And oh, my love, are you really gone?<br>
+Ooooh<br>
+And can you see the world through a window?<br>
+Are you having troubles in droves?<br>
+Oh, I think the worst thing I could do<br>
+Is get back home to you<br>
+<br>
+I put a bullet in my Kia Lorenzo<br>
+A kitchen knife fucked in my face<br>
+Throw me in the deep of Jenner Lake<br>
+Believe me when I say<br>
+<br>
+That oh, my love, you don&#8217;t even call<br>
+And oh, my love, is that you on the phone?<br>
+Ooooh<br>
+<br>
+And oh, my love, you don&#8217;t even know<br>
+That oh, my love, are you really gone?<br>
+Ooooh<br>
+</em>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Farewell Gothenburg 2008.Aug-2010.Aug]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/08/14/farewell-gothenburg-2008-aug-2010-aug/"/>
+    <updated>2010-08-14T22:10:14-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/08/14/farewell-gothenburg-2008-aug-2010-aug</id>
+    <content type="html"><![CDATA[<a href="http://wzhang.org.s3.amazonaws.com/images/2010/08/1-e1281777038987.png"><img title="1" src="http://wzhang.org.s3.amazonaws.com/images/2010/08/1-e1281777162711.png" alt="" width="290" height="243" /></a><a href="http://wzhang.org.s3.amazonaws.com/images/2010/08/IMG_0100.jpg"><img class="alignnone size-medium wp-image-932" title="IMG_0100" src="http://wzhang.org.s3.amazonaws.com/images/2010/08/IMG_0100-e1281775978674-225x300.jpg" alt="" width="183" height="243" /></a><a href="http://wzhang.org.s3.amazonaws.com/images/2010/08/IMG_0082.jpg"><img class="alignnone size-medium wp-image-953" title="IMG_0082" src="http://wzhang.org.s3.amazonaws.com/images/2010/08/IMG_0082-225x300.jpg" alt="" width="152" height="203" /></a><a href="http://wzhang.org.s3.amazonaws.com/images/2010/08/IMG_0093.jpg"><img class="alignnone size-medium wp-image-954" title="IMG_0093" src="http://wzhang.org.s3.amazonaws.com/images/2010/08/IMG_0093-225x300.jpg" alt="" width="152" height="203" /></a><a href="http://wzhang.org.s3.amazonaws.com/images/2010/08/IMG_0076-1.jpg"><img title="IMG_0076 1" src="http://wzhang.org.s3.amazonaws.com/images/2010/08/IMG_0076-1-225x300.jpg" alt="" width="152" height="203" /></a>
+<a href="http://www.chalmersfastigheter.se/english/campus/johanneberg_entre.jpg" target="_blank"><strong><span style="font-size: small;">Chalmers</span></strong></a> <a href="http://maps.google.com/maps?f=q&source=s_q&hl=en&geocode=&q=uppstigen+107,+gothenburg&sll=52.38759,13.506608&sspn=0.286644,0.726471&ie=UTF8&hq=&hnear=Uppstigen+107,+G%C3%B6teborg,+V%C3%A4stra+G%C3%B6talands+L%C3%A4n,+Sweden&ll=57.687061,11.991829&spn=0.001961,0.005676&t=h&z=18&iwloc=A" target="_blank">Uppstigen 107</a> <a href=" http://photo.renren.com/photo/sp/hel53wEbl4u" target="_blank"><em><span style="font-size: xx-small;">IESD08-1</span></em></a> <a href="http://www.wzhang.org/wp-content/uploads/2010/08/IMG_0079.JPG" target="_blank"><strong><span style="font-size: xx-small;">IESD08-2</span></strong></a> <a href="http://www.wzhang.org/wp-content/uploads/2010/08/P1020797.JPG" target="_blank"><span style="font-size: x-big;">Gals</span></a> <a href="http://www.wzhang.org/wp-content/uploads/2010/08/DSC_0008.JPG" target="_blank"><span style="font-size: x-normal;"><strong>CSE-1</strong></span></a> <a href="http://www.wzhang.org/wp-content/uploads/2010/08/DSC_0012.JPG" target="_blank"><span style="font-size: x-normal;"><em><strong>CSE-2</strong></em></span></a> <br>
+<strong>The Smashing Pumpkins - Mayonaise -></strong><br>
+<iframe class="youtube-player" type="text/html" width="425" height="318" src="http://www.youtube.com/embed/O9b0OfdPxn0?hl=en_US" frameborder="0"></iframe><br>
+<script src="http://wzhang.org.s3.amazonaws.com/images/player/audio-player.js"></script><object id="audioplayer1" classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" width="290" height="24" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0"><param name="FlashVars" value="playerID=1&amp;soundFile=http://wzhang.org.s3.amazonaws.com/images/MP3/09-the_smashing_pumpkins-mayonaise-dnr.mp3" /><param name="quality" value="high" /><param name="menu" value="false" /><param name="wmode" value="transparent" /><param name="src" value="http://wzhang.org.s3.amazonaws.com/images/player/player.swf" /><param name="flashvars" value="playerID=1&amp;soundFile=http://wzhang.org.s3.amazonaws.com/images/MP3/09-the_smashing_pumpkins-mayonaise-dnr.mp3" /><embed id="audioplayer1" type="application/x-shockwave-flash" width="290" height="24" src="http://wzhang.org.s3.amazonaws.com/images/player/player.swf" wmode="transparent" menu="false" quality="high" flashvars="playerID=1&amp;soundFile=http://wzhang.org.s3.amazonaws.com/images/MP3/09-the_smashing_pumpkins-mayonaise-dnr.mp3"></embed></object><br>
+<strong>[Mayonaise - Lyric]</strong><br>
+<em>Fool enough to almost be it<br>
+Cool enough to not quite see it<br>
+Doomed<br>
+Pick your pockets full of sorrow<br>
+And run away with me tomorrow<br>
+June <br>
+<br>
+We&#8217;ll try and ease the pain<br>
+But somehow we&#8217;ll feel the same<br>
+Well, no one knows<br>
+Where our secrets go<br>
+<br>
+I send a heart to all my dearies<br>
+When your life is so, so dreary<br>
+Dream<br>
+I&#8217;m rumored to the straight and narrow<br>
+While the harlots of my perils<br>
+Scream<br>
+<br>
+And I fail<br>
+But when I can, I will<br>
+Try to understand<br>
+That when I can, I will<br>
+Mother weep the years I&#8217;m missing<br>
+All our time can&#8217;t be given<br>
+Back<br>
+Shut my mouth and strike the demons<br>
+That cursed you and your reasons<br>
+Out of hand and out of season<br>
+Out of love and out of feeling<br>
+So bad<br>
+<br>
+When I can, I will<br>
+Words defy the plan<br>
+When I can, I will<br>
+<br>
+Fool enough to almost be it<br>
+And cool enough to not quite see it<br>
+And old enough to always feel this<br>
+Always old, I&#8217;ll always feel this<br>
+<br>
+No more promise no more sorrow<br>
+No longer will I follow<br>
+Can anybody hear me<br>
+I just want to be me<br>
+When I can, I will<br>
+Try to understand<br>
+That when I can, I will</em>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[36 Crazyfists - At The End of August]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/07/24/36-crazyfists-at-the-end-of-august/"/>
+    <updated>2010-07-24T04:52:46-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/07/24/36-crazyfists-at-the-end-of-august</id>
+    <content type="html"><![CDATA[<img class="alignnone" title="36 crazyfists" src="http://panther1.last.fm/proposedimages/original/6/1001591/69704.jpg" alt="" width="460" height="280" /><object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" width="480" height="360" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0"><param name="allowFullScreen" value="true" /><param name="allowScriptAccess" value="always" /><param name="src" value="http://www.dailymotion.com/swf/video/xcxo8h?additionalInfos=0" /><param name="allowfullscreen" value="true" /><embed type="application/x-shockwave-flash" width="480" height="360" src="http://www.dailymotion.com/swf/video/xcxo8h?additionalInfos=0" allowscriptaccess="always" allowfullscreen="true"></embed></object>
+<strong>[At The End of August - Lyric]</strong><br>
+<em>So I lit lanterns to light up all these words<br>
+Looking back I know it&#8217;s what I&#8217;d die for<br>
+And through all this life<br>
+Smashed away all the strife<br>
+A friendship I paint<br>
+Untouchable<br>
+<br>
+Crawling from the floor<br>
+I been there before<br>
+There I was staring back at the bottom<br>
+And let&#8217;s make this clear<br>
+It came from these tears<br>
+Carved across our chests<br>
+Loyalty&#8230;<br>
+<br>
+And with the new light there was young hope<br>
+To underline the meaning<br>
+And carve our names in<br>
+<br>
+At the end of August<br>
+The end of<br>
+At the end of August<br>
+The end of<br>
+<br>
+I&#8217;ll never replace the ones I first made<br>
+Jesus, does anyone?<br>
+So I lit lanterns to <br>
+Light up all these words<br>
+Looking back I know it&#8217;s what I&#8217;d die for<br>
+And through all this life<br>
+Smashed away all the strife<br>
+A friendship I paint<br>
+Untouchable<br>
+<br>
+And with the new light there was young hope<br>
+To underline the meaning<br>
+And carve our names in<br>
+<br>
+At the end of August<br>
+The end of<br>
+At the end of August<br>
+The end of<br>
+<br>
+I&#8217;ll never replace the ones I first made<br>
+Jesus, does anyone?<br>
+<br>
+Crawling from the floor<br>
+I been there before<br>
+And let&#8217;s make this clear<br>
+Loyalty<br>
+<br>
+And I want you to know<br>
+How all of you made me<br>
+How all of you saved me<br>
+And I&#8217;ll never replace<br>
+The ones I first made<br>
+Jesus, does anyone?<br>
+<br>
+At the end of August<br>
+The end of<br>
+At the end of August<br>
+The end of<br>
+<br>
+I&#8217;ll never replace the ones I first made<br>
+Jesus, does anyone?<br>
+<br>
+Crawling from the floor<br>
+I been there before<br>
+There I was staring back at the bottom<br>
+<br>
+And let&#8217;s make this clear<br>
+It came from these tears<br>
+Carved across our chests<br>
+Loyalty<br>
+<br>
+Loyalty, loyal<br>
+</em>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Pearl Jam - Nothingman - Live at Seattle 2000]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/07/10/pearl-jam-nothingman-live-at-seattle-2000/"/>
+    <updated>2010-07-10T03:31:18-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/07/10/pearl-jam-nothingman-live-at-seattle-2000</id>
+    <content type="html"><![CDATA[<object width="480" height="355"><param name="movie" value="http://www.youtube.com/v/7U7d9mHs8VQ&amp;hl=en_US&amp;fs=1?rel=0&amp;color1=0x006699&amp;color2=0x54abd6"></param><param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param><embed src="http://www.youtube.com/v/7U7d9mHs8VQ&amp;hl=en_US&amp;fs=1?rel=0&amp;color1=0x006699&amp;color2=0x54abd6" type="application/x-shockwave-flash" allowscriptaccess="always" allowfullscreen="true" width="480" height="355"></embed></object>
+<strong>[Nothingman - Lyric]</strong><br>
+<em>Once divided&#8230;nothing left to subtract&#8230;<br>
+Some words when spoken&#8230;can&#8217;t be taken back&#8230;<br>
+Walks on his own&#8230;with thoughts he can&#8217;t help thinking&#8230;<br>
+Future&#8217;s above&#8230;but in the past he&#8217;s slow and sinking&#8230;<br>
+Caught a bolt &#8216;a li<strong>G</strong>htnin&#8217;&#8230;cu<strong>R</strong>sed the day he let it go&#8230;<br>
+<br>
+Nothingman&#8230; (2x)<br>
+Isn&#8217;t it something?<br>
+Nothingman&#8230;<br>
+She once believed&#8230;in every story he had to tell&#8230;<br>
+One day she stiffened&#8230;took the other side&#8230;<br>
+Empty stares&#8230;from each corner of a shared prison cell&#8230;<br>
+One just escapes&#8230;one&#8217;s left inside the well&#8230;<br>
+And he who forgets&#8230;will be destined to remember&#8230;oh&#8230;oh&#8230;oh&#8230;<br>
+<br>
+Nothingman&#8230; (2x)<br>
+Isn&#8217;t it something?<br>
+Nothingman&#8230;<br>
+<br>
+Oh, she don&#8217;t want him&#8230;<br>
+Oh, she won&#8217;t feed him&#8230;after he&#8217;s flown away&#8230;<br>
+Oh, into the sun&#8230;ah, into the sun&#8230;<br>
+<br>
+Burn&#8230;burn&#8230;<br>
+Nothingman&#8230; (2x)<br>
+Isn&#8217;t it something?<br>
+Nothingman&#8230;<br>
+Nothingman&#8230; (2x)<br>
+Coulda&#8217; been something&#8230;<br>
+Nothingman&#8230;<br>
+Oh&#8230;ohh&#8230;ohh&#8230; </em>]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Blur - You're So Great]]></title>
+    <link href="http://ndrzmansn.github.com/blog/2010/07/01/blur-youre-so-great/"/>
+    <updated>2010-07-01T05:26:37-07:00</updated>
+    <id>http://ndrzmansn.github.com/blog/2010/07/01/blur-youre-so-great</id>
+    <content type="html"><![CDATA[<a href="http://wzhang.org.s3.amazonaws.com/images/2010/07/882303.jpg"><img class="alignnone size-full wp-image-889" title="882303" src="http://wzhang.org.s3.amazonaws.com/images/2010/07/882303.jpg" alt="" width="252" height="360" /></a>
+<script src="http://wzhang.org.s3.amazonaws.com/images/player/audio-player.js"></script><object id="audioplayer1" classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" width="290" height="24" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0"><param name="FlashVars" value="playerID=1&amp;soundFile=http://wzhang.org.s3.amazonaws.com/images/MP3/Blur_-_You_re_So_Great.mp3" /><param name="quality" value="high" /><param name="menu" value="false" /><param name="wmode" value="transparent" /><param name="src" value="http://wzhang.org.s3.amazonaws.com/images/player/player.swf" /><param name="flashvars" value="playerID=1&amp;soundFile=http://wzhang.org.s3.amazonaws.com/images/MP3/Blur_-_You_re_So_Great.mp3" /><embed id="audioplayer1" type="application/x-shockwave-flash" width="290" height="24" src="http://wzhang.org.s3.amazonaws.com/images/player/player.swf" wmode="transparent" menu="false" quality="high" flashvars="playerID=1&amp;soundFile=http://wzhang.org.s3.amazonaws.com/images/MP3/Blur_-_You_re_So_Great.mp3"></embed></object>
+<a href="http://wzhang.org.s3.amazonaws.com/images/2010/07/IMG_00511.jpg"><img class="alignnone size-large wp-image-894" title="IMG_0051" src="http://wzhang.org.s3.amazonaws.com/images/2010/07/IMG_00511-768x1024.jpg" alt="" width="252" height="335" /></a>
+<p>没有心情听新歌，继续英伦怀旧。将就听吧&#8230;</p>
+<strong>[You&#8217;re So Great - Lyric]</strong><br>
+<em>Sad, drunk, and poorly <br>
+Sleeping really late <br>
+Sad, drunk, and poorly <br>
+Not feeling so great <br>
+Wandering lost in a town full of frowns <br>
+Sad, drunk, and poorly <br>
+Dogs digging up the ground <br>
+<br>
+And I feel the light <br>
+In the night and in the day <br>
+And I feel the light <br>
+When the sky&#8217;s just mud and grey <br>
+And I feel the light <br>
+When you tell me it&#8217;s OK <br>
+Cos you&#8217;re so great, and I love you <br>
+Tea Tea and coffee <br>
+Helps to start the day <br>
+Tea Tea and coffee <br>
+Shaking all the way <br>
+City&#8217;s alive and, surprise, so am I <br>
+Tea, tea and coffee <br>
+Get no sleep today <br>
+<br>
+And I feel the light <br>
+In the night and in the day <br>
+And I feel the light <br>
+When the sky&#8217;s just mud and grey <br>
+And I feel the light <br>
+When you tell me it&#8217;s OK <br>
+Cos you&#8217;re so great, and I love you</em> ]]></content>
+  </entry>
+  
+</feed>
